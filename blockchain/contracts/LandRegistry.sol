@@ -36,4 +36,25 @@ contract LandRegistry {
             true
         );
     }
+
+    function buyProperty(uint _id) public payable {
+        Property storage prop = properties[_id];
+
+        require(prop.isForSale == true, "Ez az ingatlan nem megvasarolhato");
+        require(msg.value >= prop.price, "Nincs elegendo penze az ingatlan vasarlasahoz!");
+        require(prop.owner != msg.sender, "A sajat ingatlanat nem vasarolhatja meg!");
+
+        address previousOwner = prop.owner;
+
+        prop.owner = msg.sender;
+        prop.isForSale = false;
+
+        payable(previousOwner).transfer(msg.value);
+    }
+
+    function putOnSale(uint _id, uint _newPrice) public {
+        require(properties[_id].owner == msg.sender, "Csak az ingatlan tulajdonosa teheti eladasra az ingatlant!");
+        properties[_id].isForSale = true;
+        properties[_id].price = _newPrice;
+    }
 }
