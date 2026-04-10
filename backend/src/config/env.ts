@@ -12,4 +12,5 @@ export const env = {
   port: intOr("3000"),
   /** Required once database features are used */
   databaseUrl: process.env.DATABASE_URL ?? "",
+  jwtSecret: process.env.JWT_SECRET ?? "dev-only-change-me",
 };
