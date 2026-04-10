@@ -1,57 +1,51 @@
-# Sample Hardhat 3 Beta Project (`mocha` and `ethers`)
+# Blockchain Land Registry (Hardhat)
 
-This project showcases a Hardhat 3 Beta project using `mocha` for tests and the `ethers` library for Ethereum interactions.
+Thesis prototype: a **minimal** Solidity registry only. There is no frontend, backend service, wallet UI, or on-chain payments in this package—only the `LandRegistry` contract, tests, and optional Ignition deploy.
 
-To learn more about the Hardhat 3 Beta, please visit the [Getting Started guide](https://hardhat.org/docs/getting-started#getting-started-with-hardhat-3). To share your feedback, join our [Hardhat 3 Beta](https://hardhat.org/hardhat3-beta-telegram-group) Telegram group or [open an issue](https://github.com/NomicFoundation/hardhat/issues/new) in our GitHub issue tracker.
+## LandRegistry contract
 
-## Project Overview
+Source: [`contracts/LandRegistry.sol`](contracts/LandRegistry.sol).
 
-This example project includes:
+The deployer becomes the **admin**. Only the admin can **register** new properties (unique `propertyId`, location, price, and initial owner). The **current owner** can **transfer** ownership to another address (`price` is metadata for this prototype).
 
-- A simple Hardhat configuration file.
-- Foundry-compatible Solidity unit tests.
-- TypeScript integration tests using `mocha` and ethers.js
-- Examples demonstrating how to connect to different types of networks, including locally simulating OP mainnet.
+On-chain fields per property: `propertyId`, `location`, `price`, `currentOwner`, `exists`. Events: `PropertyRegistered`, `PropertyTransferred`.
 
-## Usage
+**Rules enforced in-contract:** admin-only registration; no duplicate `propertyId`; non-zero initial owner; transfers only for existing properties; only the current owner may transfer; non-zero `newOwner`.
 
-### Running Tests
+## Compile
 
-To run all the tests in the project, execute the following command:
+From this `blockchain` folder:
+
+```shell
+npx hardhat compile
+```
+
+## Test
+
+Run all tests:
 
 ```shell
 npx hardhat test
 ```
 
-You can also selectively run the Solidity or `mocha` tests:
+Run only the Mocha / TypeScript tests:
 
 ```shell
-npx hardhat test solidity
 npx hardhat test mocha
 ```
 
-### Make a deployment to Sepolia
+## Deploy (Ignition)
 
-This project includes an example Ignition module to deploy the contract. You can deploy this module to a locally simulated chain or to Sepolia.
-
-To run the deployment to a local chain:
+Local chain:
 
 ```shell
-npx hardhat ignition deploy ignition/modules/Counter.ts
+npx hardhat ignition deploy ignition/modules/LandRegistry.ts
 ```
 
-To run the deployment to Sepolia, you need an account with funds to send the transaction. The provided Hardhat configuration includes a Configuration Variable called `SEPOLIA_PRIVATE_KEY`, which you can use to set the private key of the account you want to use.
-
-You can set the `SEPOLIA_PRIVATE_KEY` variable using the `hardhat-keystore` plugin or by setting it as an environment variable.
-
-To set the `SEPOLIA_PRIVATE_KEY` config variable using `hardhat-keystore`:
+Sepolia (set `SEPOLIA_RPC_URL` and `SEPOLIA_PRIVATE_KEY` via env or `npx hardhat keystore set`):
 
 ```shell
-npx hardhat keystore set SEPOLIA_PRIVATE_KEY
+npx hardhat ignition deploy --network sepolia ignition/modules/LandRegistry.ts
 ```
 
-After setting the variable, you can run the deployment with the Sepolia network:
-
-```shell
-npx hardhat ignition deploy --network sepolia ignition/modules/Counter.ts
-```
+For more on Hardhat 3, see the [Getting Started guide](https://hardhat.org/docs/getting-started#getting-started-with-hardhat-3).

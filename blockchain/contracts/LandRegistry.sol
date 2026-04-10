@@ -1,60 +1,87 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.28;
 
+/// @title LandRegistry
+/// @notice Minimal on-chain land/property registry for a thesis prototype.
 contract LandRegistry {
-    // State variable to store the address of the contract administrator
-    address public Admin;
+    address public admin;
+
+    struct Property {
+        uint256 propertyId;
+        string location;
+        uint256 price;
+        address currentOwner;
+        bool exists;
+    }
+
+    mapping(uint256 => Property) private properties;
+
+    event PropertyRegistered(
+        uint256 indexed propertyId,
+        string location,
+        uint256 price,
+        address indexed currentOwner
+    );
+
+    event PropertyTransferred(
+        uint256 indexed propertyId,
+        address indexed from,
+        address indexed to
+    );
 
     constructor() {
-        Admin = msg.sender;
+        admin = msg.sender;
     }
 
-    // Struct to represent a land parcel
-    struct Property {
-        uint id;
-        string location;
-        uint price;
-        address owner;
-        bool isForSale;
+    modifier onlyAdmin() {
+        require(msg.sender == admin, "LandRegistry: not admin");
+        _;
     }
 
-    mapping(uint => Property) public properties;
-    uint public propertyCount = 0;
+    function registerProperty(
+        uint256 propertyId,
+        string memory location,
+        uint256 price,
+        address initialOwner
+    ) external onlyAdmin {
+        require(!properties[propertyId].exists, "LandRegistry: duplicate propertyId");
+        require(initialOwner != address(0), "LandRegistry: invalid initial owner");
 
-    function registryProperty(string memory _location, uint _price) public {
-        require(
-            msg.sender == Admin,
-            "Csak a Foldhivatal altal felruhazott szemely regisztralhat ingatlant."
-        );
-        propertyCount++;
+        properties[propertyId] = Property({
+            propertyId: propertyId,
+            location: location,
+            price: price,
+            currentOwner: initialOwner,
+            exists: true
+        });
 
-        properties[propertyCount] = Property(
-            propertyCount,
-            _location,
-            _price,
-            Admin,
-            true
-        );
+        emit PropertyRegistered(propertyId, location, price, initialOwner);
     }
 
-    function buyProperty(uint _id) public payable {
-        Property storage prop = properties[_id];
+    function transferProperty(uint256 propertyId, address newOwner) external {
+        Property storage p = properties[propertyId];
+        require(p.exists, "LandRegistry: property does not exist");
+        require(msg.sender == p.currentOwner, "LandRegistry: not owner");
+        require(newOwner != address(0), "LandRegistry: zero address");
 
-        require(prop.isForSale == true, "Ez az ingatlan nem megvasarolhato");
-        require(msg.value >= prop.price, "Nincs elegendo penze az ingatlan vasarlasahoz!");
-        require(prop.owner != msg.sender, "A sajat ingatlanat nem vasarolhatja meg!");
+        address from = p.currentOwner;
+        p.currentOwner = newOwner;
 
-        address previousOwner = prop.owner;
-
-        prop.owner = msg.sender;
-        prop.isForSale = false;
-
-        payable(previousOwner).transfer(msg.value);
+        emit PropertyTransferred(propertyId, from, newOwner);
     }
 
-    function putOnSale(uint _id, uint _newPrice) public {
-        require(properties[_id].owner == msg.sender, "Csak az ingatlan tulajdonosa teheti eladasra az ingatlant!");
-        properties[_id].isForSale = true;
-        properties[_id].price = _newPrice;
+    function getProperty(uint256 propertyId)
+        external
+        view
+        returns (
+            uint256 id,
+            string memory location,
+            uint256 price,
+            address currentOwner,
+            bool exists
+        )
+    {
+        Property storage p = properties[propertyId];
+        return (p.propertyId, p.location, p.price, p.currentOwner, p.exists);
     }
 }
