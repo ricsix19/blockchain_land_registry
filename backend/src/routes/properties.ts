@@ -31,7 +31,7 @@ router.get("/", async (_req, res) => {
 
 /**
  * Admin registers on-chain, then stores a row for indexing.
- * Body: { propertyId, location, priceWei, initialOwner }
+ * Body: { propertyId, location, priceWei, initialOwnerUserId } or legacy { initialOwner }
  */
 router.post("/", requireAdmin, async (req, res) => {
   try {
@@ -50,15 +50,37 @@ router.post("/", requireAdmin, async (req, res) => {
     res.status(400).json({ error: "priceWei required (integer string, wei)" });
     return;
   }
-  const initialOwner =
-    typeof req.body?.initialOwner === "string" ? req.body.initialOwner.trim() : "";
+
+  let initialOwner = "";
+  const ownerUserIdRaw = req.body?.initialOwnerUserId;
+  if (ownerUserIdRaw !== undefined && ownerUserIdRaw !== null && ownerUserIdRaw !== "") {
+    const ownerUserId = parseInt(String(ownerUserIdRaw), 10);
+    if (!Number.isFinite(ownerUserId)) {
+      res.status(400).json({ error: "invalid initialOwnerUserId" });
+      return;
+    }
+    const { rows } = await dbPool().query<{ wallet_address: string | null }>(
+      "SELECT wallet_address FROM users WHERE id = $1",
+      [ownerUserId],
+    );
+    const wa = rows[0]?.wallet_address?.trim() ?? "";
+    if (!wa || !ethers.isAddress(wa)) {
+      res.status(400).json({ error: "Selected user has no wallet address on file" });
+      return;
+    }
+    initialOwner = wa;
+  } else if (typeof req.body?.initialOwner === "string") {
+    initialOwner = req.body.initialOwner.trim();
+  }
 
   if (location === "" || initialOwner === "" || rawId === undefined || rawId === null) {
-    res.status(400).json({ error: "propertyId, location, initialOwner required" });
+    res.status(400).json({
+      error: "propertyId, location, and initialOwnerUserId (or legacy initialOwner) required",
+    });
     return;
   }
   if (!ethers.isAddress(initialOwner)) {
-    res.status(400).json({ error: "invalid initialOwner address" });
+    res.status(400).json({ error: "invalid initial owner address" });
     return;
   }
 
@@ -105,8 +127,8 @@ router.post("/", requireAdmin, async (req, res) => {
 });
 
 /**
- * Transfer on-chain ownership (thesis "buy" step without payment in this prototype).
- * Body: { newOwner }
+ * Transfer on-chain ownership to the authenticated user's wallet (thesis "buy" step).
+ * newOwner is taken from users.wallet_address for req.user.id (no address in request body).
  */
 router.post("/:id/buy", async (req, res) => {
   try {
@@ -116,10 +138,19 @@ router.post("/:id/buy", async (req, res) => {
     return;
   }
 
-  const newOwner =
-    typeof req.body?.newOwner === "string" ? req.body.newOwner.trim() : "";
+  const userId = req.user?.id;
+  if (userId === undefined) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  const { rows: userRows } = await dbPool().query<{ wallet_address: string | null }>(
+    "SELECT wallet_address FROM users WHERE id = $1",
+    [userId],
+  );
+  const newOwner = userRows[0]?.wallet_address?.trim() ?? "";
   if (!newOwner || !ethers.isAddress(newOwner)) {
-    res.status(400).json({ error: "newOwner address required" });
+    res.status(400).json({ error: "Your account has no wallet address on file" });
     return;
   }
 

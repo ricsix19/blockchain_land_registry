@@ -10,6 +10,8 @@ function intOr(defaultPort: string): number {
 export const env = {
   nodeEnv: process.env.NODE_ENV ?? "development",
   port: intOr("3000"),
+  /** Browser origin for CORS (Vite default: http://localhost:5173) */
+  corsOrigin: process.env.FRONTEND_ORIGIN ?? "http://localhost:5173",
   /** Required once database features are used */
   databaseUrl: process.env.DATABASE_URL ?? "",
   jwtSecret: process.env.JWT_SECRET ?? "dev-only-change-me",
