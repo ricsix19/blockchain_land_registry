@@ -58,3 +58,28 @@ h1 {
 .link-button.secondary {
   background: #475569;
 }
+
+.form {
+  display: grid;
+  gap: 12px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  font-size: 0.9rem;
+  color: #374151;
+}
+
+.field input {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 1rem;
+}
+
+.error-text {
+  margin: 0;
+  color: #b91c1c;
+  font-size: 0.9rem;
+}
