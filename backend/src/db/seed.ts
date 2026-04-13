@@ -18,24 +18,26 @@ async function main(): Promise<void> {
   const hash = bcrypt.hashSync(password, 10);
 
   await dbPool().query(
-    `INSERT INTO users (email, password_hash, role, wallet_address)
-     VALUES ($1, $2, 'admin', $3)
+    `INSERT INTO users (email, password_hash, role, wallet_address, full_name)
+     VALUES ($1, $2, 'admin', $3, $4)
      ON CONFLICT (email) DO UPDATE SET
-       wallet_address = COALESCE(EXCLUDED.wallet_address, users.wallet_address)`,
-    ["admin@example.com", hash, ADMIN_WALLET],
+       wallet_address = COALESCE(EXCLUDED.wallet_address, users.wallet_address),
+       full_name = COALESCE(EXCLUDED.full_name, users.full_name)`,
+    ["admin@example.com", hash, ADMIN_WALLET, "Elena Registrar"],
   );
 
   await dbPool().query(
-    `INSERT INTO users (email, password_hash, role, wallet_address)
-     VALUES ($1, $2, 'user', $3)
+    `INSERT INTO users (email, password_hash, role, wallet_address, full_name)
+     VALUES ($1, $2, 'user', $3, $4)
      ON CONFLICT (email) DO UPDATE SET
-       wallet_address = COALESCE(EXCLUDED.wallet_address, users.wallet_address)`,
-    ["buyer@example.com", hash, BUYER_WALLET],
+       wallet_address = COALESCE(EXCLUDED.wallet_address, users.wallet_address),
+       full_name = COALESCE(EXCLUDED.full_name, users.full_name)`,
+    ["buyer@example.com", hash, BUYER_WALLET, "Alex Buyer"],
   );
 
   console.log("Seed complete:");
-  console.log(`  admin@example.com / ${password} → ${ADMIN_WALLET}`);
-  console.log(`  buyer@example.com / ${password} → ${BUYER_WALLET}`);
+  console.log(`  Elena Registrar — admin@example.com / ${password} → ${ADMIN_WALLET}`);
+  console.log(`  Alex Buyer — buyer@example.com / ${password} → ${BUYER_WALLET}`);
   await dbPool().end();
 }
 

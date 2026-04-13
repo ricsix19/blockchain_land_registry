@@ -2,13 +2,7 @@ import { Router } from "express";
 import { ethers } from "ethers";
 import { dbPool } from "../db/pool.js";
 import { requireAdmin, requireAuth } from "../middleware/auth.js";
-import {
-  assertChainConfig,
-  assertTransferConfig,
-  getLandRegistryAsAdmin,
-  getLandRegistryAsTransferSigner,
-  parseWei,
-} from "../services/landRegistryChain.js";
+import { assertChainConfig, getLandRegistryAsAdmin, parseWei } from "../services/landRegistryChain.js";
 
 const router = Router();
 
@@ -127,63 +121,13 @@ router.post("/", requireAdmin, async (req, res) => {
 });
 
 /**
- * Transfer on-chain ownership to the authenticated user's wallet (thesis "buy" step).
- * newOwner is taken from users.wallet_address for req.user.id (no address in request body).
+ * Direct on-chain buy removed: use POST /purchase-requests then admin approval.
  */
-router.post("/:id/buy", async (req, res) => {
-  try {
-    assertTransferConfig();
-  } catch (e) {
-    res.status(503).json({ error: (e as Error).message });
-    return;
-  }
-
-  const userId = req.user?.id;
-  if (userId === undefined) {
-    res.status(401).json({ error: "Unauthorized" });
-    return;
-  }
-
-  const { rows: userRows } = await dbPool().query<{ wallet_address: string | null }>(
-    "SELECT wallet_address FROM users WHERE id = $1",
-    [userId],
-  );
-  const newOwner = userRows[0]?.wallet_address?.trim() ?? "";
-  if (!newOwner || !ethers.isAddress(newOwner)) {
-    res.status(400).json({ error: "Your account has no wallet address on file" });
-    return;
-  }
-
-  let propertyId: bigint;
-  try {
-    propertyId = BigInt(req.params.id);
-  } catch {
-    res.status(400).json({ error: "invalid property id" });
-    return;
-  }
-
-  const registry = getLandRegistryAsTransferSigner();
-
-  try {
-    const tx = await registry.transferProperty(propertyId, newOwner);
-    const receipt = await tx.wait();
-    const txHash = receipt?.hash ?? tx.hash;
-
-    await dbPool().query(
-      `UPDATE properties SET owner_address = $1 WHERE property_id = $2`,
-      [newOwner.toLowerCase(), propertyId.toString()],
-    );
-
-    await dbPool().query(
-      `INSERT INTO transactions (tx_hash, property_id, action) VALUES ($1, $2, 'transfer')`,
-      [txHash, propertyId.toString()],
-    );
-
-    res.json({ txHash, propertyId: propertyId.toString(), newOwner });
-  } catch (e) {
-    console.error(e);
-    res.status(502).json({ error: "On-chain transfer failed", detail: String(e) });
-  }
+router.post("/:id/buy", async (_req, res) => {
+  res.status(410).json({
+    error:
+      "Direct purchase is disabled. Submit a purchase request first; a registrar approves it before the chain transfer runs.",
+  });
 });
 
 export default router;

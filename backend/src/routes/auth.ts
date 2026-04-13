@@ -24,7 +24,12 @@ router.post("/login", async (req, res) => {
       id: number;
       password_hash: string;
       role: "admin" | "user";
-    }>("SELECT id, password_hash, role FROM users WHERE email = $1", [email]);
+      wallet_address: string | null;
+      full_name: string | null;
+    }>(
+      "SELECT id, password_hash, role, wallet_address, full_name FROM users WHERE email = $1",
+      [email],
+    );
 
     const row = rows[0];
     if (!row || !bcrypt.compareSync(password, row.password_hash)) {
@@ -38,7 +43,12 @@ router.post("/login", async (req, res) => {
       { expiresIn: "8h" },
     );
 
-    res.json({ token, role: row.role });
+    res.json({
+      token,
+      role: row.role,
+      walletAddress: row.wallet_address,
+      fullName: row.full_name,
+    });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: "Login failed" });

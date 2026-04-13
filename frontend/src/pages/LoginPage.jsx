@@ -27,7 +27,7 @@ export default function LoginPage() {
         throw new Error(data?.error || "Login failed");
       }
 
-      setAuth(data.token, data.role);
+      setAuth(data.token, data.role, data.walletAddress ?? "", data.fullName ?? "");
       navigate("/dashboard");
       window.location.reload();
     } catch (e) {
