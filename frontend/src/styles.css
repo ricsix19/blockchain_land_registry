@@ -83,3 +83,25 @@ h1 {
   color: #b91c1c;
   font-size: 0.9rem;
 }
+
+.properties-list {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.property-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 12px;
+  background: #fff;
+}
+
+.property-card h3 {
+  margin: 0 0 6px 0;
+  font-size: 1rem;
+}
+
+.property-card p {
+  margin: 4px 0;
+}
