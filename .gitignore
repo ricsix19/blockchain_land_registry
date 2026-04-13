@@ -13,4 +13,6 @@ states/
 # Optional
 .env
 .env.local
-node_modules
+node_modules/
+/backend/node_modules/
+/blockchain/node_modules/
