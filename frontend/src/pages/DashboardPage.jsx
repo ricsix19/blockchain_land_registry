@@ -111,9 +111,23 @@ export default function DashboardPage() {
 
   return (
     <main className="page">
-      <section className="card">
-        <h1>Dashboard</h1>
-        <p className="muted">Logged in role: {auth.role || "unknown"}</p>
+      <section className="card card--wide">
+        <header className="dash-header">
+          <div>
+            <h1>Dashboard</h1>
+            <p className="muted">Properties synced from your backend and chain.</p>
+          </div>
+          <div className="dash-header__actions">
+            <span
+              className={`role-badge ${auth.role === "admin" ? "role-badge--admin" : ""}`}
+            >
+              {auth.role || "unknown"}
+            </span>
+            <button className="link-button secondary" type="button" onClick={logout}>
+              Logout
+            </button>
+          </div>
+        </header>
         {auth.role === "admin" ? (
           <form className="form form-box" onSubmit={onRegister}>
             <h3>Register Property</h3>
@@ -163,7 +177,9 @@ export default function DashboardPage() {
         {error ? <p className="error-text">{error}</p> : null}
         {buyError ? <p className="error-text">{buyError}</p> : null}
         {!loading && !error ? (
-          <div className="properties-list">
+          <>
+            <h2 className="section-title">Registered properties</h2>
+            <div className="properties-list">
             {items.length === 0 ? (
               <div className="placeholder-box">No properties found yet.</div>
             ) : (
@@ -197,11 +213,9 @@ export default function DashboardPage() {
                 </article>
               ))
             )}
-          </div>
+            </div>
+          </>
         ) : null}
-        <button className="link-button secondary" type="button" onClick={logout}>
-          Logout
-        </button>
       </section>
     </main>
   );
