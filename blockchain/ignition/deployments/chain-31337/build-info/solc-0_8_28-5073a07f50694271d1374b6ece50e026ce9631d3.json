@@ -1,0 +1,39 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_28-5073a07f50694271d1374b6ece50e026ce9631d3",
+  "solcVersion": "0.8.28",
+  "solcLongVersion": "0.8.28+commit.7893614a",
+  "userSourceNameMap": {
+    "contracts/LandRegistry.sol": "project/contracts/LandRegistry.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "cancun",
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode",
+            "evm.deployedBytecode",
+            "evm.methodIdentifiers",
+            "metadata"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/LandRegistry.sol": {
+        "content": "// SPDX-License-Identifier: MIT\r\npragma solidity ^0.8.19;\r\n\r\ncontract LandRegistry {\r\n    // State variable to store the address of the contract administrator\r\n    address public Admin;\r\n\r\n    constructor() {\r\n        Admin = msg.sender;\r\n    }\r\n\r\n    // Struct to represent a land parcel\r\n    struct Property {\r\n        uint id;\r\n        string location;\r\n        uint price;\r\n        address owner;\r\n        bool isForSale;\r\n    }\r\n\r\n    mapping(uint => Property) public properties;\r\n    uint public propertyCount = 0;\r\n\r\n    function registryProperty(string memory _location, uint _price) public {\r\n        require(\r\n            msg.sender == Admin,\r\n            \"Csak a Foldhivatal altal felruhazott szemely regisztralhat ingatlant.\"\r\n        );\r\n        propertyCount++;\r\n\r\n        properties[propertyCount] = Property(\r\n            propertyCount,\r\n            _location,\r\n            _price,\r\n            Admin,\r\n            true\r\n        );\r\n    }\r\n\r\n    function buyProperty(uint _id) public payable {\r\n        Property storage prop = properties[_id];\r\n\r\n        require(prop.isForSale == true, \"Ez az ingatlan nem megvasarolhato\");\r\n        require(msg.value >= prop.price, \"Nincs elegendo penze az ingatlan vasarlasahoz!\");\r\n        require(prop.owner != msg.sender, \"A sajat ingatlanat nem vasarolhatja meg!\");\r\n\r\n        address previousOwner = prop.owner;\r\n\r\n        prop.owner = msg.sender;\r\n        prop.isForSale = false;\r\n\r\n        payable(previousOwner).transfer(msg.value);\r\n    }\r\n\r\n    function putOnSale(uint _id, uint _newPrice) public {\r\n        require(properties[_id].owner == msg.sender, \"Csak az ingatlan tulajdonosa teheti eladasra az ingatlant!\");\r\n        properties[_id].isForSale = true;\r\n        properties[_id].price = _newPrice;\r\n    }\r\n}\r\n"
+      }
+    }
+  }
+}
