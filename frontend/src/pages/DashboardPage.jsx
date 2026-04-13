@@ -10,7 +10,10 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [regError, setRegError] = useState("");
+  const [buyError, setBuyError] = useState("");
   const [registering, setRegistering] = useState(false);
+  const [buyingId, setBuyingId] = useState("");
+  const [buyOwnerById, setBuyOwnerById] = useState({});
   const [form, setForm] = useState({
     propertyId: "",
     location: "",
@@ -66,6 +69,37 @@ export default function DashboardPage() {
       setRegError(e.message || "Registration failed");
     } finally {
       setRegistering(false);
+    }
+  }
+
+  async function onBuy(propertyId) {
+    const newOwner = (buyOwnerById[propertyId] || "").trim();
+    if (!newOwner) {
+      setBuyError("New owner address is required.");
+      return;
+    }
+
+    setBuyError("");
+    setBuyingId(String(propertyId));
+    try {
+      const response = await fetch(`${baseUrl}/properties/${propertyId}/buy`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${auth.token}`,
+        },
+        body: JSON.stringify({ newOwner }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.error || "Buy transfer failed");
+      }
+      setBuyOwnerById((prev) => ({ ...prev, [propertyId]: "" }));
+      await loadProperties();
+    } catch (e) {
+      setBuyError(e.message || "Buy transfer failed");
+    } finally {
+      setBuyingId("");
     }
   }
 
@@ -127,6 +161,7 @@ export default function DashboardPage() {
         ) : null}
         {loading ? <p className="muted">Loading properties...</p> : null}
         {error ? <p className="error-text">{error}</p> : null}
+        {buyError ? <p className="error-text">{buyError}</p> : null}
         {!loading && !error ? (
           <div className="properties-list">
             {items.length === 0 ? (
@@ -138,6 +173,27 @@ export default function DashboardPage() {
                   <p>{p.location}</p>
                   <p className="muted">Owner: {p.owner_address}</p>
                   <p className="muted">Price (wei): {p.price_wei}</p>
+                  <div className="buy-row">
+                    <input
+                      type="text"
+                      placeholder="New owner address"
+                      value={buyOwnerById[p.property_id] || ""}
+                      onChange={(e) =>
+                        setBuyOwnerById((prev) => ({
+                          ...prev,
+                          [p.property_id]: e.target.value,
+                        }))
+                      }
+                    />
+                    <button
+                      className="link-button"
+                      type="button"
+                      onClick={() => onBuy(p.property_id)}
+                      disabled={buyingId === String(p.property_id)}
+                    >
+                      {buyingId === String(p.property_id) ? "Processing..." : "Buy / Transfer"}
+                    </button>
+                  </div>
                 </article>
               ))
             )}

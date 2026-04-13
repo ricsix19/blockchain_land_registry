@@ -116,3 +116,16 @@ h1 {
 .property-card p {
   margin: 4px 0;
 }
+
+.buy-row {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.buy-row input {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 0.95rem;
+}
