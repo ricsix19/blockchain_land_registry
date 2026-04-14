@@ -32,48 +32,102 @@ describe("LandRegistry", function () {
     ).to.be.revertedWith("LandRegistry: not admin");
   });
 
-  it("owner can transfer property", async function () {
-    const [, , owner, newOwner] = await ethers.getSigners();
+  it("user can submit purchase request", async function () {
+    const [, , owner, buyer] = await ethers.getSigners();
     const registry = await ethers.deployContract("LandRegistry");
 
     await registry.registerProperty(propertyId, location, price, owner.address);
 
     await expect(
-      registry.connect(owner).transferProperty(propertyId, newOwner.address),
+      registry.connect(buyer).requestPurchase(propertyId, buyer.address),
     )
-      .to.emit(registry, "PropertyTransferred")
-      .withArgs(propertyId, owner.address, newOwner.address);
+      .to.emit(registry, "PurchaseRequested")
+      .withArgs(propertyId, buyer.address);
   });
 
-  it("non-owner cannot transfer property", async function () {
-    const [, , owner, other, newOwner] = await ethers.getSigners();
+  it("cannot submit purchase request for non-existing property", async function () {
+    const [, , , buyer] = await ethers.getSigners();
+    const registry = await ethers.deployContract("LandRegistry");
+
+    await expect(
+      registry.connect(buyer).requestPurchase(9999n, buyer.address),
+    ).to.be.revertedWith("LandRegistry: property does not exist");
+  });
+
+  it("cannot request purchase if buyer is current owner", async function () {
+    const [, , owner] = await ethers.getSigners();
     const registry = await ethers.deployContract("LandRegistry");
 
     await registry.registerProperty(propertyId, location, price, owner.address);
 
     await expect(
-      registry.connect(other).transferProperty(propertyId, newOwner.address),
-    ).to.be.revertedWith("LandRegistry: not owner");
+      registry.connect(owner).requestPurchase(propertyId, owner.address),
+    ).to.be.revertedWith("LandRegistry: already owner");
   });
 
-  it("getProperty returns correct values", async function () {
-    const [, , owner, newOwner] = await ethers.getSigners();
+  it("cannot create a second pending request for the same property", async function () {
+    const [, , owner, buyer, other] = await ethers.getSigners();
+    const registry = await ethers.deployContract("LandRegistry");
+
+    await registry.registerProperty(propertyId, location, price, owner.address);
+    await registry.connect(buyer).requestPurchase(propertyId, buyer.address);
+
+    await expect(
+      registry.connect(other).requestPurchase(propertyId, other.address),
+    ).to.be.revertedWith("LandRegistry: pending exists");
+  });
+
+  it("admin can approve purchase request", async function () {
+    const [deployer, , owner, buyer] = await ethers.getSigners();
+    const registry = await ethers.deployContract("LandRegistry");
+
+    await registry.registerProperty(propertyId, location, price, owner.address);
+    await registry.connect(buyer).requestPurchase(propertyId, buyer.address);
+
+    await expect(registry.connect(deployer).approvePurchaseRequest(propertyId))
+      .to.emit(registry, "PurchaseApproved")
+      .withArgs(propertyId, buyer.address, owner.address, buyer.address)
+      .and.to.emit(registry, "PropertyTransferred")
+      .withArgs(propertyId, owner.address, buyer.address);
+
+    const row = await registry.getProperty(propertyId);
+    expect(row.currentOwner).to.equal(buyer.address);
+    expect(row.pendingTransfer).to.equal(false);
+  });
+
+  it("non-admin cannot approve purchase request", async function () {
+    const [, , owner, buyer] = await ethers.getSigners();
+    const registry = await ethers.deployContract("LandRegistry");
+
+    await registry.registerProperty(propertyId, location, price, owner.address);
+    await registry.connect(buyer).requestPurchase(propertyId, buyer.address);
+
+    await expect(
+      registry.connect(buyer).approvePurchaseRequest(propertyId),
+    ).to.be.revertedWith("LandRegistry: not admin");
+  });
+
+  it("getProperty returns correct owner and pendingTransfer before and after approval", async function () {
+    const [deployer, , owner, buyer] = await ethers.getSigners();
     const registry = await ethers.deployContract("LandRegistry");
 
     await registry.registerProperty(propertyId, location, price, owner.address);
 
     let row = await registry.getProperty(propertyId);
-    expect(row.id).to.equal(propertyId);
-    expect(row.location).to.equal(location);
-    expect(row.price).to.equal(price);
     expect(row.currentOwner).to.equal(owner.address);
-    expect(row.exists).to.equal(true);
+    expect(row.pendingTransfer).to.equal(false);
 
-    await registry.connect(owner).transferProperty(propertyId, newOwner.address);
+    await registry.connect(buyer).requestPurchase(propertyId, buyer.address);
 
     row = await registry.getProperty(propertyId);
-    expect(row.currentOwner).to.equal(newOwner.address);
-    expect(row.exists).to.equal(true);
+    expect(row.currentOwner).to.equal(owner.address);
+    expect(row.pendingTransfer).to.equal(true);
+
+    await registry.connect(deployer).approvePurchaseRequest(propertyId);
+
+    row = await registry.getProperty(propertyId);
+    expect(row.currentOwner).to.equal(buyer.address);
+    expect(row.pendingTransfer).to.equal(false);
   });
 
   it("duplicate propertyId reverts", async function () {
@@ -85,27 +139,5 @@ describe("LandRegistry", function () {
     await expect(
       registry.registerProperty(propertyId, "Other", price, owner.address),
     ).to.be.revertedWith("LandRegistry: duplicate propertyId");
-  });
-
-  it("transfer unknown property reverts", async function () {
-    const [, , , other] = await ethers.getSigners();
-    const registry = await ethers.deployContract("LandRegistry");
-
-    await expect(
-      registry.connect(other).transferProperty(9999n, other.address),
-    ).to.be.revertedWith("LandRegistry: property does not exist");
-  });
-
-  it("transfer to zero address reverts", async function () {
-    const [, , owner] = await ethers.getSigners();
-    const registry = await ethers.deployContract("LandRegistry");
-
-    await registry.registerProperty(propertyId, location, price, owner.address);
-
-    await expect(
-      registry
-        .connect(owner)
-        .transferProperty(propertyId, ethers.ZeroAddress),
-    ).to.be.revertedWith("LandRegistry: zero address");
   });
 });
