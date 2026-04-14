@@ -16,3 +16,4 @@ states/
 node_modules/
 /backend/node_modules/
 /blockchain/node_modules/
+/frontend/dist/assets/

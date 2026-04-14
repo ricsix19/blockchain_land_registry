@@ -153,6 +153,12 @@ export default function DashboardPage() {
     return u.email;
   }
 
+  /** Admin queue: property IDs with any pending request (from API). */
+  const adminPendingPropertyIds =
+    auth.role === "admin"
+      ? new Set(pendingRequests.map((r) => String(r.property_id)))
+      : null;
+
   async function onRegister(event) {
     event.preventDefault();
     setRegError("");
@@ -215,10 +221,14 @@ export default function DashboardPage() {
       if (!response.ok) {
         throw new Error(data?.error || "Could not submit purchase request");
       }
-      setRequestSuccess(
+      let msg =
         data?.message ||
-          "Purchase request submitted. A registrar must approve it before ownership changes.",
-      );
+        "Purchase request recorded on-chain. A registrar must approve it before ownership changes.";
+      if (data?.requestTxHash && typeof data.requestTxHash === "string") {
+        const h = data.requestTxHash;
+        msg = `${msg} Request tx: ${h.length > 14 ? `${h.slice(0, 10)}…${h.slice(-6)}` : h}.`;
+      }
+      setRequestSuccess(msg);
       await loadMyPending();
       if (auth.role === "admin") {
         await loadPendingRequests();
@@ -243,7 +253,10 @@ export default function DashboardPage() {
       if (!response.ok) {
         throw new Error(data?.error || "Approval failed");
       }
-      setRequestSuccess(data?.message || "Purchase approved; chain transfer completed.");
+      setRequestSuccess(
+        data?.message ||
+          "Purchase approved; ownership finalized on-chain and mirrored in the database.",
+      );
       await loadProperties();
       await loadPendingRequests();
       await loadMyPending();
@@ -268,8 +281,8 @@ export default function DashboardPage() {
             <h1>Dashboard</h1>
             <p className="muted">
               Human-readable names in the office; unique wallet addresses on-chain. To acquire a
-              listing, submit a purchase request — a registrar approves it, then the system runs the
-              on-chain transfer (thesis demo — no payment).
+              listing, submit a purchase request — it is stored on-chain as pending; a registrar then
+              approves it to finalize ownership (thesis demo — no payment, no wallet extension).
             </p>
             {auth.fullName ? (
               <p className="signed-in-as">
@@ -374,7 +387,9 @@ export default function DashboardPage() {
             <div className="pending-panel__head">
               <h3 id="pending-heading">Pending purchase requests</h3>
               <p className="pending-panel__sub muted">
-                Approve to run the on-chain transfer and update the registry mirror.
+                Each row is a pending on-chain request. Approving calls the contract{"'"}s{" "}
+                <code className="inline-code">approvePurchaseRequest</code> and updates the database
+                mirror.
               </p>
             </div>
             {pendingLoading ? (
@@ -401,7 +416,7 @@ export default function DashboardPage() {
                       onClick={() => onApproveRequest(r.id)}
                       disabled={approvingId === String(r.id)}
                     >
-                      {approvingId === String(r.id) ? "Approving…" : "Approve & transfer"}
+                      {approvingId === String(r.id) ? "Approving…" : "Approve request (on-chain)"}
                     </button>
                   </li>
                 ))}
@@ -423,8 +438,9 @@ export default function DashboardPage() {
                 onChange={(e) => setSimulatedPurchaseOk(e.target.checked)}
               />
               <span>
-                I confirm I am submitting a <strong>simulated</strong> purchase request only (thesis
-                demo — no payment).
+                I confirm I am submitting a <strong>simulated</strong> on-chain purchase request
+                only (thesis demo — no payment). This does not transfer ownership until a registrar
+                approves.
               </span>
             </label>
             <div className="properties-list">
@@ -434,16 +450,28 @@ export default function DashboardPage() {
                 items.map((p) => {
                   const owned = isAlreadyOwner(p);
                   const pid = String(p.property_id);
-                  const hasPendingRequest = myPendingPropertyIds.includes(pid);
+                  const hasMyPendingRequest = myPendingPropertyIds.includes(pid);
+                  const hasQueuedPending = adminPendingPropertyIds?.has(pid) ?? false;
+                  const blockedByOtherRequest =
+                    hasQueuedPending && !hasMyPendingRequest && auth.role === "admin";
                   const requestDisabled =
                     !simulatedPurchaseOk ||
                     owned ||
                     !auth.walletAddress ||
-                    hasPendingRequest ||
+                    hasMyPendingRequest ||
+                    blockedByOtherRequest ||
                     submittingId === pid;
+                  const showPendingBadge = hasMyPendingRequest || hasQueuedPending;
                   return (
                     <article className="property-card" key={p.property_id}>
-                      <h3>Property #{p.property_id}</h3>
+                      <h3 className="property-card__title-row">
+                        <span>Property #{p.property_id}</span>
+                        {showPendingBadge ? (
+                          <span className="property-badge" title="A purchase request is pending on-chain">
+                            Pending request
+                          </span>
+                        ) : null}
+                      </h3>
                       <p>{p.location}</p>
                       <p className="muted">Current owner: {shortenAddress(p.owner_address)}</p>
                       <p className="muted">Price (wei): {p.price_wei}</p>
@@ -454,17 +482,25 @@ export default function DashboardPage() {
                           <p className="buy-blocked">
                             No wallet on file for your account — re-run DB seed or set wallet_address.
                           </p>
-                        ) : hasPendingRequest ? (
-                          <p className="buy-pending">Awaiting registrar approval for your request.</p>
+                        ) : blockedByOtherRequest ? (
+                          <p className="buy-pending">
+                            Another party already has a pending purchase request for this property.
+                            Approve or wait in the queue above.
+                          </p>
+                        ) : hasMyPendingRequest ? (
+                          <p className="buy-pending">
+                            Your request is pending on-chain — ownership changes only after registrar
+                            approval.
+                          </p>
                         ) : !simulatedPurchaseOk ? (
                           <p className="buy-hint">
-                            Check the confirmation box above to submit a purchase request.
+                            Check the confirmation box above to enable submitting a purchase request.
                           </p>
                         ) : (
                           <p className="buy-hint">
-                            If approved, ownership moves to{" "}
+                            Submits an on-chain pending request for{" "}
                             <strong>{auth.fullName || "your account"}</strong> (
-                            {shortenAddress(auth.walletAddress)}).
+                            {shortenAddress(auth.walletAddress)}). No ownership change until approved.
                           </p>
                         )}
                         <button
@@ -474,10 +510,12 @@ export default function DashboardPage() {
                           disabled={requestDisabled}
                         >
                           {submittingId === pid
-                            ? "Submitting…"
-                            : hasPendingRequest
+                            ? "Submitting on-chain…"
+                            : hasMyPendingRequest
                               ? "Request pending"
-                              : "Submit purchase request"}
+                              : blockedByOtherRequest
+                                ? "Queue busy"
+                                : "Request purchase (on-chain)"}
                         </button>
                       </div>
                     </article>
