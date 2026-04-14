@@ -2,13 +2,7 @@ import { Router } from "express";
 import { ethers } from "ethers";
 import { dbPool } from "../db/pool.js";
 import { requireAdmin, requireAuth } from "../middleware/auth.js";
-import {
-  assertChainConfig,
-  assertTransferConfig,
-  getLandRegistryAsAdmin,
-  getLandRegistryAsTransferSigner,
-  parseWei,
-} from "../services/landRegistryChain.js";
+import { assertChainConfig, getLandRegistryAsAdmin, parseWei } from "../services/landRegistryChain.js";
 
 const router = Router();
 
@@ -31,7 +25,7 @@ router.get("/", async (_req, res) => {
 
 /**
  * Admin registers on-chain, then stores a row for indexing.
- * Body: { propertyId, location, priceWei, initialOwner }
+ * Body: { propertyId, location, priceWei, initialOwnerUserId } or legacy { initialOwner }
  */
 router.post("/", requireAdmin, async (req, res) => {
   try {
@@ -50,15 +44,37 @@ router.post("/", requireAdmin, async (req, res) => {
     res.status(400).json({ error: "priceWei required (integer string, wei)" });
     return;
   }
-  const initialOwner =
-    typeof req.body?.initialOwner === "string" ? req.body.initialOwner.trim() : "";
+
+  let initialOwner = "";
+  const ownerUserIdRaw = req.body?.initialOwnerUserId;
+  if (ownerUserIdRaw !== undefined && ownerUserIdRaw !== null && ownerUserIdRaw !== "") {
+    const ownerUserId = parseInt(String(ownerUserIdRaw), 10);
+    if (!Number.isFinite(ownerUserId)) {
+      res.status(400).json({ error: "invalid initialOwnerUserId" });
+      return;
+    }
+    const { rows } = await dbPool().query<{ wallet_address: string | null }>(
+      "SELECT wallet_address FROM users WHERE id = $1",
+      [ownerUserId],
+    );
+    const wa = rows[0]?.wallet_address?.trim() ?? "";
+    if (!wa || !ethers.isAddress(wa)) {
+      res.status(400).json({ error: "Selected user has no wallet address on file" });
+      return;
+    }
+    initialOwner = wa;
+  } else if (typeof req.body?.initialOwner === "string") {
+    initialOwner = req.body.initialOwner.trim();
+  }
 
   if (location === "" || initialOwner === "" || rawId === undefined || rawId === null) {
-    res.status(400).json({ error: "propertyId, location, initialOwner required" });
+    res.status(400).json({
+      error: "propertyId, location, and initialOwnerUserId (or legacy initialOwner) required",
+    });
     return;
   }
   if (!ethers.isAddress(initialOwner)) {
-    res.status(400).json({ error: "invalid initialOwner address" });
+    res.status(400).json({ error: "invalid initial owner address" });
     return;
   }
 
@@ -105,54 +121,13 @@ router.post("/", requireAdmin, async (req, res) => {
 });
 
 /**
- * Transfer on-chain ownership (thesis "buy" step without payment in this prototype).
- * Body: { newOwner }
+ * Direct on-chain buy removed: use POST /purchase-requests then admin approval.
  */
-router.post("/:id/buy", async (req, res) => {
-  try {
-    assertTransferConfig();
-  } catch (e) {
-    res.status(503).json({ error: (e as Error).message });
-    return;
-  }
-
-  const newOwner =
-    typeof req.body?.newOwner === "string" ? req.body.newOwner.trim() : "";
-  if (!newOwner || !ethers.isAddress(newOwner)) {
-    res.status(400).json({ error: "newOwner address required" });
-    return;
-  }
-
-  let propertyId: bigint;
-  try {
-    propertyId = BigInt(req.params.id);
-  } catch {
-    res.status(400).json({ error: "invalid property id" });
-    return;
-  }
-
-  const registry = getLandRegistryAsTransferSigner();
-
-  try {
-    const tx = await registry.transferProperty(propertyId, newOwner);
-    const receipt = await tx.wait();
-    const txHash = receipt?.hash ?? tx.hash;
-
-    await dbPool().query(
-      `UPDATE properties SET owner_address = $1 WHERE property_id = $2`,
-      [newOwner.toLowerCase(), propertyId.toString()],
-    );
-
-    await dbPool().query(
-      `INSERT INTO transactions (tx_hash, property_id, action) VALUES ($1, $2, 'transfer')`,
-      [txHash, propertyId.toString()],
-    );
-
-    res.json({ txHash, propertyId: propertyId.toString(), newOwner });
-  } catch (e) {
-    console.error(e);
-    res.status(502).json({ error: "On-chain transfer failed", detail: String(e) });
-  }
+router.post("/:id/buy", async (_req, res) => {
+  res.status(410).json({
+    error:
+      "Direct purchase is disabled. Submit a purchase request first; a registrar approves it before the chain transfer runs.",
+  });
 });
 
 export default router;
