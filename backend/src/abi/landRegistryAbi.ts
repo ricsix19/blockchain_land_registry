@@ -19,6 +19,7 @@ export const LAND_REGISTRY_ABI = [
       { internalType: "uint256", name: "price", type: "uint256" },
       { internalType: "address", name: "currentOwner", type: "address" },
       { internalType: "bool", name: "exists", type: "bool" },
+      { internalType: "bool", name: "pendingTransfer", type: "bool" },
     ],
     stateMutability: "view",
     type: "function",
@@ -38,9 +39,16 @@ export const LAND_REGISTRY_ABI = [
   {
     inputs: [
       { internalType: "uint256", name: "propertyId", type: "uint256" },
-      { internalType: "address", name: "newOwner", type: "address" },
+      { internalType: "address", name: "buyer", type: "address" },
     ],
-    name: "transferProperty",
+    name: "requestPurchase",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "uint256", name: "propertyId", type: "uint256" }],
+    name: "approvePurchaseRequest",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",

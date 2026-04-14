@@ -2,7 +2,12 @@ import { Router } from "express";
 import { ethers } from "ethers";
 import { dbPool } from "../db/pool.js";
 import { requireAdmin, requireAuth } from "../middleware/auth.js";
-import { assertTransferConfig, getLandRegistryAsTransferSigner } from "../services/landRegistryChain.js";
+import {
+  assertChainConfig,
+  assertTransferConfig,
+  getLandRegistryAsAdmin,
+  getLandRegistryAsTransferSigner,
+} from "../services/landRegistryChain.js";
 
 const router = Router();
 
@@ -34,7 +39,7 @@ function normAddr(a: string): string {
 }
 
 /**
- * Buyer submits an off-chain purchase request (pending until admin approves).
+ * Buyer submits a purchase request: on-chain requestPurchase, then DB row (pending until admin approves).
  * Body: { propertyId, confirm: true }
  */
 router.post("/", async (req, res) => {
@@ -42,6 +47,13 @@ router.post("/", async (req, res) => {
     res.status(400).json({
       error: "Send { propertyId, confirm: true } after acknowledging the simulated request.",
     });
+    return;
+  }
+
+  try {
+    assertTransferConfig();
+  } catch (e) {
+    res.status(503).json({ error: (e as Error).message });
     return;
   }
 
@@ -97,19 +109,27 @@ router.post("/", async (req, res) => {
     return;
   }
 
+  const registryRelayer = getLandRegistryAsTransferSigner();
+
   try {
+    const tx = await registryRelayer.requestPurchase(propertyId, buyerWallet);
+    const receipt = await tx.wait();
+    const requestTxHash = receipt?.hash ?? tx.hash;
+
     await dbPool().query(
       `INSERT INTO purchase_requests (property_id, buyer_user_id, status)
        VALUES ($1, $2, 'pending')`,
       [propertyId.toString(), userId],
     );
+
     res.status(201).json({
-      message: "Purchase request submitted. A registrar must approve it before ownership changes.",
+      message: "Purchase request submitted on-chain. A registrar must approve it before ownership changes.",
       propertyId: propertyId.toString(),
+      requestTxHash,
     });
   } catch (e) {
     console.error(e);
-    res.status(500).json({ error: "Failed to save purchase request" });
+    res.status(502).json({ error: "On-chain purchase request failed", detail: String(e) });
   }
 });
 
@@ -146,11 +166,11 @@ router.get("/pending", requireAdmin, async (_req, res) => {
 });
 
 /**
- * Admin: approve request — executes on-chain transfer and updates mirror DB.
+ * Admin: approve request — on-chain approvePurchaseRequest, then mirror DB update.
  */
 router.post("/:id/approve", requireAdmin, async (req, res) => {
   try {
-    assertTransferConfig();
+    assertChainConfig();
   } catch (e) {
     res.status(503).json({ error: (e as Error).message });
     return;
@@ -224,10 +244,10 @@ router.post("/:id/approve", requireAdmin, async (req, res) => {
     return;
   }
 
-  const registry = getLandRegistryAsTransferSigner();
+  const registryAdmin = getLandRegistryAsAdmin();
 
   try {
-    const tx = await registry.transferProperty(propertyId, newOwner);
+    const tx = await registryAdmin.approvePurchaseRequest(propertyId);
     const receipt = await tx.wait();
     const txHash = receipt?.hash ?? tx.hash;
 
