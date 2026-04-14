@@ -14,7 +14,13 @@ contract LandRegistry {
         bool exists;
     }
 
+    /// @notice buyer != address(0) means a purchase request is pending for that property.
+    struct PurchaseRequest {
+        address buyer;
+    }
+
     mapping(uint256 => Property) private properties;
+    mapping(uint256 => PurchaseRequest) private purchaseRequests;
 
     event PropertyRegistered(
         uint256 indexed propertyId,
@@ -27,6 +33,15 @@ contract LandRegistry {
         uint256 indexed propertyId,
         address indexed from,
         address indexed to
+    );
+
+    event PurchaseRequested(uint256 indexed propertyId, address indexed buyer);
+
+    event PurchaseApproved(
+        uint256 indexed propertyId,
+        address indexed buyer,
+        address from,
+        address to
     );
 
     constructor() {
@@ -58,16 +73,36 @@ contract LandRegistry {
         emit PropertyRegistered(propertyId, location, price, initialOwner);
     }
 
-    function transferProperty(uint256 propertyId, address newOwner) external {
+    /// @notice Record a pending purchase; backend can submit on behalf of the buyer (no MetaMask).
+    /// @dev No payment; ownership changes only in approvePurchaseRequest.
+    function requestPurchase(uint256 propertyId, address buyer) external {
         Property storage p = properties[propertyId];
         require(p.exists, "LandRegistry: property does not exist");
-        require(msg.sender == p.currentOwner, "LandRegistry: not owner");
-        require(newOwner != address(0), "LandRegistry: zero address");
+        require(buyer != address(0), "LandRegistry: invalid buyer");
+        require(buyer != p.currentOwner, "LandRegistry: already owner");
+        require(
+            purchaseRequests[propertyId].buyer == address(0),
+            "LandRegistry: pending exists"
+        );
+
+        purchaseRequests[propertyId].buyer = buyer;
+        emit PurchaseRequested(propertyId, buyer);
+    }
+
+    /// @notice Registrar finalizes transfer after approving the pending request.
+    function approvePurchaseRequest(uint256 propertyId) external onlyAdmin {
+        Property storage p = properties[propertyId];
+        require(p.exists, "LandRegistry: property does not exist");
+        address buyer = purchaseRequests[propertyId].buyer;
+        require(buyer != address(0), "LandRegistry: no pending");
+
+        delete purchaseRequests[propertyId];
 
         address from = p.currentOwner;
-        p.currentOwner = newOwner;
+        p.currentOwner = buyer;
 
-        emit PropertyTransferred(propertyId, from, newOwner);
+        emit PurchaseApproved(propertyId, buyer, from, buyer);
+        emit PropertyTransferred(propertyId, from, buyer);
     }
 
     function getProperty(uint256 propertyId)
@@ -78,10 +113,12 @@ contract LandRegistry {
             string memory location,
             uint256 price,
             address currentOwner,
-            bool exists
+            bool exists,
+            bool pendingTransfer
         )
     {
         Property storage p = properties[propertyId];
-        return (p.propertyId, p.location, p.price, p.currentOwner, p.exists);
+        pendingTransfer = purchaseRequests[propertyId].buyer != address(0);
+        return (p.propertyId, p.location, p.price, p.currentOwner, p.exists, pendingTransfer);
     }
 }
