@@ -19,6 +19,10 @@ export default function DashboardPage() {
   const [pendingRequests, setPendingRequests] = useState([]);
   const [pendingLoading, setPendingLoading] = useState(false);
   const [simulatedPurchaseOk, setSimulatedPurchaseOk] = useState(false);
+  const [locationDrafts, setLocationDrafts] = useState({});
+  const [updatingLocationId, setUpdatingLocationId] = useState("");
+  const [locationUpdateSuccess, setLocationUpdateSuccess] = useState("");
+  const [locationUpdateError, setLocationUpdateError] = useState("");
 
   const [ownerQuery, setOwnerQuery] = useState("");
   const [ownerSuggestions, setOwnerSuggestions] = useState([]);
@@ -267,6 +271,50 @@ export default function DashboardPage() {
     }
   }
 
+  async function onAdminPatchLocation(propertyId, pidKey) {
+    setLocationUpdateError("");
+    setLocationUpdateSuccess("");
+    const newLocation = String(locationDrafts[pidKey] ?? "").trim();
+    if (!newLocation) {
+      setLocationUpdateError("Enter a non-empty location.");
+      return;
+    }
+    setUpdatingLocationId(pidKey);
+    try {
+      const response = await fetch(
+        `${baseUrl}/properties/${encodeURIComponent(String(propertyId))}/location`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${auth.token}`,
+          },
+          body: JSON.stringify({ location: newLocation }),
+        },
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.error || "Location update failed");
+      }
+      setLocationUpdateSuccess(
+        data?.message || "Property location updated on-chain and in the mirror.",
+      );
+      setLocationDrafts((prev) => {
+        const next = { ...prev };
+        delete next[pidKey];
+        return next;
+      });
+      await loadProperties();
+      if (auth.role === "admin") {
+        await loadPendingRequests();
+      }
+    } catch (e) {
+      setLocationUpdateError(e.message || "Location update failed");
+    } finally {
+      setUpdatingLocationId("");
+    }
+  }
+
   function logout() {
     clearAuth();
     navigate("/login");
@@ -422,6 +470,10 @@ export default function DashboardPage() {
         {error ? <p className="error-text">{error}</p> : null}
         {requestSuccess ? <p className="success-banner">{requestSuccess}</p> : null}
         {requestError ? <p className="error-text">{requestError}</p> : null}
+        {locationUpdateSuccess ? (
+          <p className="success-banner">{locationUpdateSuccess}</p>
+        ) : null}
+        {locationUpdateError ? <p className="error-text">{locationUpdateError}</p> : null}
         {!loading && !error ? (
           <>
             <h2 className="section-title">Registered properties</h2>
@@ -469,6 +521,36 @@ export default function DashboardPage() {
                       <p>{p.location}</p>
                       <p className="muted">Current owner: {p.owner_address}</p>
                       <p className="muted">Price: {p.price_wei} ETH</p>
+                      {auth.role === "admin" ? (
+                        <div className="admin-location-update field">
+                          <span>Registrar: set new location</span>
+                          <input
+                            type="text"
+                            autoComplete="off"
+                            value={locationDrafts[pid] ?? ""}
+                            onChange={(e) =>
+                              setLocationDrafts((prev) => ({
+                                ...prev,
+                                [pid]: e.target.value,
+                              }))
+                            }
+                            placeholder={p.location}
+                          />
+                          <button
+                            className="link-button secondary"
+                            type="button"
+                            disabled={
+                              updatingLocationId === pid ||
+                              !String(locationDrafts[pid] ?? "").trim()
+                            }
+                            onClick={() => onAdminPatchLocation(p.property_id, pid)}
+                          >
+                            {updatingLocationId === pid
+                              ? "Updating…"
+                              : "Save location (on-chain)"}
+                          </button>
+                        </div>
+                      ) : null}
                       <div className="buy-actions">
                         {owned ? (
                           <p className="buy-blocked">You already own this property.</p>

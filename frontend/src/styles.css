@@ -281,6 +281,17 @@ button.link-button {
   font-size: 0.92rem;
 }
 
+.admin-location-update {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+}
+
+.admin-location-update .link-button {
+  width: 100%;
+  max-width: 280px;
+}
+
 .buy-actions {
   margin-top: 12px;
   display: grid;
