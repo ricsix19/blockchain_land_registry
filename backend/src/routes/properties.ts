@@ -139,6 +139,73 @@ router.post("/", requireAdmin, async (req, res) => {
   }
 });
 
+/**
+ * Admin updates location. Body: { location: string }
+ */
+router.patch("/:propertyId/location", requireAdmin, async (req, res) => {
+  try {
+    assertChainConfig();
+  } catch (e) {
+    res.status(503).json({ error: (e as Error).message });
+    return;
+  }
+
+  const rawParam = Array.isArray(req.params.propertyId)
+    ? req.params.propertyId[0]
+    : req.params.propertyId;
+  let propertyId: bigint;
+  try {
+    propertyId = BigInt(String(rawParam));
+  } catch {
+    res.status(400).json({ error: "invalid propertyId" });
+    return;
+  }
+
+  const newLocation =
+    typeof req.body?.location === "string" ? req.body.location.trim() : "";
+  if (newLocation === "") {
+    res.status(400).json({ error: "location required (non-empty string)" });
+    return;
+  }
+
+  const { rows: propRows } = await dbPool().query<{ location: string }>(
+    "SELECT location FROM properties WHERE property_id = $1",
+    [propertyId.toString()],
+  );
+  if (!propRows[0]) {
+    res.status(404).json({ error: "Property not found" });
+    return;
+  }
+
+  const registry = getLandRegistryAsAdmin();
+
+  try {
+    const tx = await registry.updatePropertyLocation(propertyId, newLocation);
+    const receipt = await tx.wait();
+    const txHash = receipt?.hash ?? tx.hash;
+
+    await dbPool().query(
+      `UPDATE properties SET location = $1 WHERE property_id = $2`,
+      [newLocation, propertyId.toString()],
+    );
+
+    await dbPool().query(
+      `INSERT INTO transactions (tx_hash, property_id, action) VALUES ($1, $2, 'update_location')`,
+      [txHash, propertyId.toString()],
+    );
+
+    res.json({
+      message: "Property location updated.",
+      txHash,
+      propertyId: propertyId.toString(),
+      location: newLocation,
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(502).json({ error: "Location update failed", detail: String(e) });
+  }
+});
+
 //Deprecated do not use
 // router.post("/:id/buy", async (_req, res) => {
 //   res.status(410).json({

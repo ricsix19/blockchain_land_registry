@@ -39,6 +39,16 @@ export const LAND_REGISTRY_ABI = [
   {
     inputs: [
       { internalType: "uint256", name: "propertyId", type: "uint256" },
+      { internalType: "string", name: "newLocation", type: "string" },
+    ],
+    name: "updatePropertyLocation",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "uint256", name: "propertyId", type: "uint256" },
       { internalType: "address", name: "buyer", type: "address" },
     ],
     name: "requestPurchase",
