@@ -21,7 +21,7 @@ export const env = {
   /** Must be the contract admin; used for registerProperty */
   registryAdminPrivateKey: process.env.REGISTRY_ADMIN_PRIVATE_KEY ?? "",
   /**
-   * Must match the on-chain current owner when calling transfer ("buy").
+   * Must match the current owner when calling transfer ("buy").
    * Thesis prototype: single hot wallet; production would use user-controlled keys.
    */
   propertyTransferPrivateKey: process.env.PROPERTY_TRANSFER_PRIVATE_KEY ?? "",

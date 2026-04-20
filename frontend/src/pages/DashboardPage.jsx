@@ -223,7 +223,7 @@ export default function DashboardPage() {
       }
       let msg =
         data?.message ||
-        "Purchase request recorded on-chain. A registrar must approve it before ownership changes.";
+        "Purchase request recorded. A registrar must approve it before ownership changes.";
       if (data?.requestTxHash && typeof data.requestTxHash === "string") {
         const h = data.requestTxHash;
         msg = `${msg} Request tx: ${h.length > 14 ? `${h.slice(0, 10)}…${h.slice(-6)}` : h}.`;
@@ -255,7 +255,7 @@ export default function DashboardPage() {
       }
       setRequestSuccess(
         data?.message ||
-          "Purchase approved; ownership finalized on-chain and mirrored in the database.",
+          "Purchase approved; ownership finalized",
       );
       await loadProperties();
       await loadPendingRequests();
@@ -280,9 +280,9 @@ export default function DashboardPage() {
           <div>
             <h1>Dashboard</h1>
             <p className="muted">
-              Human-readable names in the office; unique wallet addresses on-chain. To acquire a
-              listing, submit a purchase request — it is stored on-chain as pending; a registrar then
-              approves it to finalize ownership (thesis demo — no payment, no wallet extension).
+              Human-readable names, unique wallet addresses. To acquire a
+              property, submit a purchase request, an administrator then
+              approves it to finalize ownership (demo: no real payment made).
             </p>
             {auth.fullName ? (
               <p className="signed-in-as">
@@ -410,7 +410,7 @@ export default function DashboardPage() {
                       onClick={() => onApproveRequest(r.id)}
                       disabled={approvingId === String(r.id)}
                     >
-                      {approvingId === String(r.id) ? "Approving…" : "Approve request (on-chain)"}
+                      {approvingId === String(r.id) ? "Approving…" : "Approve request"}
                     </button>
                   </li>
                 ))}
@@ -432,8 +432,8 @@ export default function DashboardPage() {
                 onChange={(e) => setSimulatedPurchaseOk(e.target.checked)}
               />
               <span>
-                I confirm I am submitting a <strong>simulated</strong> on-chain purchase request
-                only. This does not transfer ownership until an administrator
+                I confirm I am submitting a <strong>simulated</strong> purchase request.
+                This does not transfer ownership until an administrator
                 approves the request.
               </span>
             </label>
@@ -461,7 +461,7 @@ export default function DashboardPage() {
                       <h3 className="property-card__title-row">
                         <span>Property #{p.property_id}</span>
                         {showPendingBadge ? (
-                          <span className="property-badge" title="A purchase request is pending on-chain">
+                          <span className="property-badge" title="A purchase request is pending">
                             Pending request
                           </span>
                         ) : null}
@@ -504,12 +504,12 @@ export default function DashboardPage() {
                           disabled={requestDisabled}
                         >
                           {submittingId === pid
-                            ? "Submitting on-chain…"
+                            ? "Submitting..."
                             : hasMyPendingRequest
                               ? "Request pending"
                               : blockedByOtherRequest
                                 ? "Queue busy"
-                                : "Request purchase (on-chain)"}
+                                : "Request purchase"}
                         </button>
                       </div>
                     </article>

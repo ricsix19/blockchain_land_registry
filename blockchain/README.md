@@ -1,6 +1,6 @@
 # Blockchain Land Registry (Hardhat)
 
-Thesis prototype: a **minimal** Solidity registry only. There is no frontend, backend service, wallet UI, or on-chain payments in this package—only the `LandRegistry` contract, tests, and optional Ignition deploy.
+Thesis prototype: a **minimal** Solidity registry only. There is no frontend, backend service, wallet UI, or payments in this package—only the `LandRegistry` contract, tests, and optional Ignition deploy.
 
 ## LandRegistry contract
 
@@ -8,7 +8,7 @@ Source: [`contracts/LandRegistry.sol`](contracts/LandRegistry.sol).
 
 The deployer becomes the **admin**. Only the admin can **register** new properties (unique `propertyId`, location, price, and initial owner). The **current owner** can **transfer** ownership to another address (`price` is metadata for this prototype).
 
-On-chain fields per property: `propertyId`, `location`, `price`, `currentOwner`, `exists`. Events: `PropertyRegistered`, `PropertyTransferred`.
+Fields per property: `propertyId`, `location`, `price`, `currentOwner`, `exists`. Events: `PropertyRegistered`, `PropertyTransferred`.
 
 **Rules enforced in-contract:** admin-only registration; no duplicate `propertyId`; non-zero initial owner; transfers only for existing properties; only the current owner may transfer; non-zero `newOwner`.
 

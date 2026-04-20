@@ -130,7 +130,7 @@ describe("LandRegistry", function () {
     expect(row.pendingTransfer).to.equal(false);
   });
 
-  it("duplicate propertyId reverts and original on-chain data is unchanged", async function () {
+  it("duplicate propertyId reverts and original data is unchanged", async function () {
     const [, , owner, otherOwner] = await ethers.getSigners();
     const registry = await ethers.deployContract("LandRegistry");
     const otherLocation = "Other Street";

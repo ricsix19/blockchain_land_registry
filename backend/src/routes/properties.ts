@@ -24,7 +24,7 @@ router.get("/", async (_req, res) => {
 });
 
 /**
- * Admin registers on-chain, then stores a row for indexing.
+ * Admin registers, then stores a row for indexing.
  * Body: { propertyId, location, priceWei, initialOwnerUserId } or legacy { initialOwner }
  */
 router.post("/", requireAdmin, async (req, res) => {
@@ -135,18 +135,16 @@ router.post("/", requireAdmin, async (req, res) => {
     res.status(201).json({ txHash, propertyId: propertyId.toString() });
   } catch (e) {
     console.error(e);
-    res.status(502).json({ error: "On-chain registration failed", detail: String(e) });
+    res.status(502).json({ error: "Registration failed", detail: String(e) });
   }
 });
 
-/**
- * Direct on-chain buy removed: use POST /purchase-requests then admin approval.
- */
-router.post("/:id/buy", async (_req, res) => {
-  res.status(410).json({
-    error:
-      "Direct purchase is disabled. Submit a purchase request first; a registrar approves it before the chain transfer runs.",
-  });
-});
+//Deprecated do not use
+// router.post("/:id/buy", async (_req, res) => {
+//   res.status(410).json({
+//     error:
+//       "Direct purchase is disabled. Submit a purchase request first; a registrar approves it before the chain transfer runs.",
+//   });
+// });
 
 export default router;

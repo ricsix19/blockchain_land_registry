@@ -39,7 +39,7 @@ function normAddr(a: string): string {
 }
 
 /**
- * Buyer submits a purchase request: on-chain requestPurchase, then DB row (pending until admin approves).
+ * Buyer submits a purchase request, then DB row (pending until admin approves).
  * Body: { propertyId, confirm: true }
  */
 router.post("/", async (req, res) => {
@@ -123,13 +123,13 @@ router.post("/", async (req, res) => {
     );
 
     res.status(201).json({
-      message: "Purchase request submitted on-chain. A registrar must approve it before ownership changes.",
+      message: "Purchase request submitted. An administrator must approve it before ownership changes.",
       propertyId: propertyId.toString(),
       requestTxHash,
     });
   } catch (e) {
     console.error(e);
-    res.status(502).json({ error: "On-chain purchase request failed", detail: String(e) });
+    res.status(502).json({ error: "Purchase request failed", detail: String(e) });
   }
 });
 
@@ -166,7 +166,7 @@ router.get("/pending", requireAdmin, async (_req, res) => {
 });
 
 /**
- * Admin: approve request — on-chain approvePurchaseRequest, then mirror DB update.
+ * Admin: approve request, then mirror DB update.
  */
 router.post("/:id/approve", requireAdmin, async (req, res) => {
   try {
@@ -239,7 +239,7 @@ router.post("/:id/approve", requireAdmin, async (req, res) => {
       [requestId],
     );
     res.status(400).json({
-      error: "Buyer already matches on-chain owner; request closed without transfer.",
+      error: "Buyer already matches owner; request closed without transfer.",
     });
     return;
   }
@@ -269,14 +269,14 @@ router.post("/:id/approve", requireAdmin, async (req, res) => {
     );
 
     res.json({
-      message: "Purchase approved; ownership transferred on-chain.",
+      message: "Purchase approved; Ownership transferred.",
       txHash,
       propertyId: row.property_id,
       newOwner,
     });
   } catch (e) {
     console.error(e);
-    res.status(502).json({ error: "On-chain transfer failed", detail: String(e) });
+    res.status(502).json({ error: "Transfer failed", detail: String(e) });
   }
 });
 
