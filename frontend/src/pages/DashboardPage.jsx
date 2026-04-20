@@ -470,14 +470,14 @@ export default function DashboardPage() {
                         ) : null}
                       </h3>
                       <p>{p.location}</p>
-                      <p className="muted">Current owner: {shortenAddress(p.owner_address)}</p>
-                      <p className="muted">Price (wei): {p.price_wei}</p>
+                      <p className="muted">Current owner: {p.owner_address}</p>
+                      <p className="muted">Price: {p.price_wei} ETH</p>
                       <div className="buy-actions">
                         {owned ? (
                           <p className="buy-blocked">You already own this property.</p>
                         ) : !auth.walletAddress ? (
                           <p className="buy-blocked">
-                            No wallet on file for your account — re-run DB seed or set wallet_address.
+                            No wallet on file for your account.
                           </p>
                         ) : blockedByOtherRequest ? (
                           <p className="buy-pending">
@@ -486,7 +486,7 @@ export default function DashboardPage() {
                           </p>
                         ) : hasMyPendingRequest ? (
                           <p className="buy-pending">
-                            Your request is pending on-chain — ownership changes only after registrar
+                            Your request is pending, ownership changes only after administrator
                             approval.
                           </p>
                         ) : !simulatedPurchaseOk ? (
@@ -495,9 +495,9 @@ export default function DashboardPage() {
                           </p>
                         ) : (
                           <p className="buy-hint">
-                            Submits an on-chain pending request for{" "}
+                            Submits a pending request for{" "}
                             <strong>{auth.fullName || "your account"}</strong> (
-                            {shortenAddress(auth.walletAddress)}). No ownership change until approved.
+                            {auth.walletAddress}). No ownership change until approved.
                           </p>
                         )}
                         <button
