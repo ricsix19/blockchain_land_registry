@@ -40,8 +40,8 @@ export default function LoginPage() {
   return (
     <main className="page">
       <section className="card">
-        <p className="eyebrow">Thesis prototype</p>
-        <h1>Blockchain Land Registry</h1>
+        {/* <p className="eyebrow">Thesis prototype</p> */}
+        <h1>Land Registry</h1>
         <p className="muted">Sign in to view and manage registered properties.</p>
 
         <form className="form" onSubmit={onSubmit}>
