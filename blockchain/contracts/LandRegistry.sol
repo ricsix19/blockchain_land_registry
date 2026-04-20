@@ -41,6 +41,12 @@ contract LandRegistry {
         address to
     );
 
+    event PropertyLocationUpdated(
+        uint256 indexed propertyId,
+        string oldLocation,
+        string newLocation
+    );
+
     constructor() {
         admin = msg.sender;
     }
@@ -69,6 +75,14 @@ contract LandRegistry {
         });
 
         emit PropertyRegistered(propertyId, location, price, initialOwner);
+    }
+
+    function updatePropertyLocation(uint256 propertyId, string memory newLocation) external onlyAdmin {
+        Property storage p = properties[propertyId];
+        require(p.exists, "LandRegistry: property does not exist");
+        string memory oldLocation = p.location;
+        p.location = newLocation;
+        emit PropertyLocationUpdated(propertyId, oldLocation, newLocation);
     }
 
     // Vásárlási kérelem küldése

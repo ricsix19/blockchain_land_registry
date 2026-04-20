@@ -154,4 +154,41 @@ describe("LandRegistry", function () {
     expect(after.currentOwner).to.equal(before.currentOwner);
     expect(after.exists).to.equal(true);
   });
+
+  it("admin can update property location", async function () {
+    const [deployer, , owner] = await ethers.getSigners();
+    const registry = await ethers.deployContract("LandRegistry");
+    const newLocation = "Updated Avenue 7";
+
+    await registry.registerProperty(propertyId, location, price, owner.address);
+
+    await expect(registry.connect(deployer).updatePropertyLocation(propertyId, newLocation))
+      .to.emit(registry, "PropertyLocationUpdated")
+      .withArgs(propertyId, location, newLocation);
+
+    const row = await registry.getProperty(propertyId);
+    expect(row.location).to.equal(newLocation);
+    expect(row.price).to.equal(price);
+    expect(row.currentOwner).to.equal(owner.address);
+  });
+
+  it("non-admin cannot update property location", async function () {
+    const [, , owner, other] = await ethers.getSigners();
+    const registry = await ethers.deployContract("LandRegistry");
+
+    await registry.registerProperty(propertyId, location, price, owner.address);
+
+    await expect(
+      registry.connect(other).updatePropertyLocation(propertyId, "Hacker Lane"),
+    ).to.be.revertedWith("LandRegistry: not admin");
+  });
+
+  it("update location for unknown propertyId reverts", async function () {
+    const [deployer] = await ethers.getSigners();
+    const registry = await ethers.deployContract("LandRegistry");
+
+    await expect(
+      registry.connect(deployer).updatePropertyLocation(9999n, "Nowhere"),
+    ).to.be.revertedWith("LandRegistry: property does not exist");
+  });
 });
