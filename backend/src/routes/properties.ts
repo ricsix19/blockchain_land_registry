@@ -86,6 +86,18 @@ router.post("/", requireAdmin, async (req, res) => {
     return;
   }
 
+  const { rows: existingProp } = await dbPool().query<{ one: number }>(
+    "SELECT 1 AS one FROM properties WHERE property_id = $1 LIMIT 1",
+    [propertyId.toString()],
+  );
+  if (existingProp.length > 0) {
+    res.status(409).json({
+      error:
+        "This property ID is already registered in the database mirror. Re-registration is not allowed.",
+    });
+    return;
+  }
+
   const registry = getLandRegistryAsAdmin();
 
   try {
@@ -98,15 +110,22 @@ router.post("/", requireAdmin, async (req, res) => {
     const receipt = await tx.wait();
     const txHash = receipt?.hash ?? tx.hash;
 
-    await dbPool().query(
-      `INSERT INTO properties (property_id, location, price_wei, owner_address)
-       VALUES ($1, $2, $3, $4)
-       ON CONFLICT (property_id) DO UPDATE SET
-         location = EXCLUDED.location,
-         price_wei = EXCLUDED.price_wei,
-         owner_address = EXCLUDED.owner_address`,
-      [propertyId.toString(), location, priceWei.toString(), initialOwner.toLowerCase()],
-    );
+    try {
+      await dbPool().query(
+        `INSERT INTO properties (property_id, location, price_wei, owner_address)
+         VALUES ($1, $2, $3, $4)`,
+        [propertyId.toString(), location, priceWei.toString(), initialOwner.toLowerCase()],
+      );
+    } catch (dbErr: unknown) {
+      const code = typeof dbErr === "object" && dbErr !== null && "code" in dbErr ? String((dbErr as { code: unknown }).code) : "";
+      if (code === "23505") {
+        res.status(409).json({
+          error: "This property ID is already registered. Re-registration is not allowed.",
+        });
+        return;
+      }
+      throw dbErr;
+    }
 
     await dbPool().query(
       `INSERT INTO transactions (tx_hash, property_id, action) VALUES ($1, $2, 'register')`,

@@ -130,14 +130,28 @@ describe("LandRegistry", function () {
     expect(row.pendingTransfer).to.equal(false);
   });
 
-  it("duplicate propertyId reverts", async function () {
-    const [, , owner] = await ethers.getSigners();
+  it("duplicate propertyId reverts and original on-chain data is unchanged", async function () {
+    const [, , owner, otherOwner] = await ethers.getSigners();
     const registry = await ethers.deployContract("LandRegistry");
+    const otherLocation = "Other Street";
+    const otherPrice = ethers.parseEther("2");
 
     await registry.registerProperty(propertyId, location, price, owner.address);
 
+    const before = await registry.getProperty(propertyId);
+    expect(before.location).to.equal(location);
+    expect(before.price).to.equal(price);
+    expect(before.currentOwner).to.equal(owner.address);
+    expect(before.exists).to.equal(true);
+
     await expect(
-      registry.registerProperty(propertyId, "Other", price, owner.address),
+      registry.registerProperty(propertyId, otherLocation, otherPrice, otherOwner.address),
     ).to.be.revertedWith("LandRegistry: duplicate propertyId");
+
+    const after = await registry.getProperty(propertyId);
+    expect(after.location).to.equal(before.location);
+    expect(after.price).to.equal(before.price);
+    expect(after.currentOwner).to.equal(before.currentOwner);
+    expect(after.exists).to.equal(true);
   });
 });
