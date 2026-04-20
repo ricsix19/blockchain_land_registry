@@ -305,8 +305,7 @@ export default function DashboardPage() {
           <form className="form form-box" onSubmit={onRegister}>
             <h3>Register property</h3>
             <p className="form-hint">
-              Type a person&apos;s name (or email). Pick a match from suggestions — the system
-              resolves their wallet internally.
+              Type a person&apos;s name (or email) to register a new property.
             </p>
             <label className="field">
               <span>Property ID</span>
@@ -336,7 +335,7 @@ export default function DashboardPage() {
               />
             </label>
             <div className="field autocomplete-field">
-              <span>Initial owner (search by name)</span>
+              <span>Initial owner (search by government name)</span>
               <input
                 type="text"
                 autoComplete="off"
@@ -370,11 +369,11 @@ export default function DashboardPage() {
                   ))}
                 </ul>
               ) : null}
-              {ownerPick ? (
+              {/* {ownerPick ? (
                 <p className="owner-picked">
                   Selected: <strong>{displayName(ownerPick)}</strong> — wallet linked in database (not shown).
                 </p>
-              ) : null}
+              ) : null} */}
             </div>
             {regError ? <p className="error-text">{regError}</p> : null}
             <button className="link-button" type="submit" disabled={registering}>
@@ -386,11 +385,9 @@ export default function DashboardPage() {
           <section className="pending-panel" aria-labelledby="pending-heading">
             <div className="pending-panel__head">
               <h3 id="pending-heading">Pending purchase requests</h3>
-              <p className="pending-panel__sub muted">
-                Each row is a pending on-chain request. Approving calls the contract{"'"}s{" "}
-                <code className="inline-code">approvePurchaseRequest</code> and updates the database
-                mirror.
-              </p>
+              {/* <p className="pending-panel__sub muted">
+                Each row is a pending on-chain request. Approving 
+              </p> */}
             </div>
             {pendingLoading ? (
               <p className="muted pending-panel__status">Loading queue…</p>
@@ -439,8 +436,8 @@ export default function DashboardPage() {
               />
               <span>
                 I confirm I am submitting a <strong>simulated</strong> on-chain purchase request
-                only (thesis demo — no payment). This does not transfer ownership until a registrar
-                approves.
+                only. This does not transfer ownership until an administrator
+                approves the request.
               </span>
             </label>
             <div className="properties-list">
