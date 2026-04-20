@@ -326,7 +326,7 @@ export default function DashboardPage() {
               />
             </label>
             <label className="field">
-              <span>Price (wei)</span>
+              <span>Price (ETH)</span>
               <input
                 type="text"
                 value={form.priceWei}
@@ -369,11 +369,11 @@ export default function DashboardPage() {
                   ))}
                 </ul>
               ) : null}
-              {/* {ownerPick ? (
+              {ownerPick ? (
                 <p className="owner-picked">
-                  Selected: <strong>{displayName(ownerPick)}</strong> — wallet linked in database (not shown).
+                  Selected: <strong>{ownerPick.wallet_address}</strong>.
                 </p>
-              ) : null} */}
+              ) : null}
             </div>
             {regError ? <p className="error-text">{regError}</p> : null}
             <button className="link-button" type="submit" disabled={registering}>
@@ -385,9 +385,6 @@ export default function DashboardPage() {
           <section className="pending-panel" aria-labelledby="pending-heading">
             <div className="pending-panel__head">
               <h3 id="pending-heading">Pending purchase requests</h3>
-              {/* <p className="pending-panel__sub muted">
-                Each row is a pending on-chain request. Approving 
-              </p> */}
             </div>
             {pendingLoading ? (
               <p className="muted pending-panel__status">Loading queue…</p>

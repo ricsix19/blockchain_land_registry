@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-/// @title LandRegistry
-/// @notice Minimal on-chain land/property registry for a thesis prototype.
 contract LandRegistry {
     address public admin;
 
@@ -14,7 +12,6 @@ contract LandRegistry {
         bool exists;
     }
 
-    /// @notice buyer != address(0) means a purchase request is pending for that property.
     struct PurchaseRequest {
         address buyer;
     }
@@ -53,6 +50,7 @@ contract LandRegistry {
         _;
     }
 
+    // Új ingatlan regisztrálása
     function registerProperty(
         uint256 propertyId,
         string memory location,
@@ -73,8 +71,7 @@ contract LandRegistry {
         emit PropertyRegistered(propertyId, location, price, initialOwner);
     }
 
-    /// @notice Record a pending purchase; backend can submit on behalf of the buyer (no MetaMask).
-    /// @dev No payment; ownership changes only in approvePurchaseRequest.
+    // Vásárlási kérelem küldése
     function requestPurchase(uint256 propertyId, address buyer) external {
         Property storage p = properties[propertyId];
         require(p.exists, "LandRegistry: property does not exist");
@@ -89,7 +86,7 @@ contract LandRegistry {
         emit PurchaseRequested(propertyId, buyer);
     }
 
-    /// @notice Registrar finalizes transfer after approving the pending request.
+    // Vásárlási kérelem jóváhagyása
     function approvePurchaseRequest(uint256 propertyId) external onlyAdmin {
         Property storage p = properties[propertyId];
         require(p.exists, "LandRegistry: property does not exist");
