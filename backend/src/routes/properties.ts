@@ -179,6 +179,34 @@ router.patch("/:propertyId/location", requireAdmin, async (req, res) => {
 
   const registry = getLandRegistryAsAdmin();
 
+  let chainRow: {
+    location: string;
+    exists: boolean;
+  };
+  try {
+    const raw = await registry.getProperty(propertyId);
+    chainRow = {
+      location: String(raw.location),
+      exists: Boolean(raw.exists),
+    };
+  } catch (e) {
+    console.error(e);
+    res.status(502).json({ error: "Failed to read property", detail: String(e) });
+    return;
+  }
+
+  if (!chainRow.exists) {
+    res.status(404).json({ error: "Property not found" });
+    return;
+  }
+
+  if (chainRow.location === newLocation) {
+    res.status(400).json({
+      error: "Location is unchanged, change it to something else.",
+    });
+    return;
+  }
+
   try {
     const tx = await registry.updatePropertyLocation(propertyId, newLocation);
     const receipt = await tx.wait();

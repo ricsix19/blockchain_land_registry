@@ -541,7 +541,9 @@ export default function DashboardPage() {
                             type="button"
                             disabled={
                               updatingLocationId === pid ||
-                              !String(locationDrafts[pid] ?? "").trim()
+                              !String(locationDrafts[pid] ?? "").trim() ||
+                              String(locationDrafts[pid] ?? "").trim() ===
+                                String(p.location ?? "").trim()
                             }
                             onClick={() => onAdminPatchLocation(p.property_id, pid)}
                           >
