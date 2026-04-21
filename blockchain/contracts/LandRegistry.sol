@@ -80,6 +80,11 @@ contract LandRegistry {
     function updatePropertyLocation(uint256 propertyId, string memory newLocation) external onlyAdmin {
         Property storage p = properties[propertyId];
         require(p.exists, "LandRegistry: property does not exist");
+        require(bytes(newLocation).length > 0, "LandRegistry: empty location");
+        require(
+            keccak256(bytes(newLocation)) != keccak256(bytes(p.location)),
+            "LandRegistry: same location"
+        );
         string memory oldLocation = p.location;
         p.location = newLocation;
         emit PropertyLocationUpdated(propertyId, oldLocation, newLocation);

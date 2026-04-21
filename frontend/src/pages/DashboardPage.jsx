@@ -297,7 +297,7 @@ export default function DashboardPage() {
         throw new Error(data?.error || "Location update failed");
       }
       setLocationUpdateSuccess(
-        data?.message || "Property location updated on-chain and in the mirror.",
+        data?.message || "Property location updated.",
       );
       setLocationDrafts((prev) => {
         const next = { ...prev };
@@ -547,7 +547,7 @@ export default function DashboardPage() {
                           >
                             {updatingLocationId === pid
                               ? "Updating…"
-                              : "Save location (on-chain)"}
+                              : "Save location"}
                           </button>
                         </div>
                       ) : null}

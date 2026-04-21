@@ -191,4 +191,26 @@ describe("LandRegistry", function () {
       registry.connect(deployer).updatePropertyLocation(9999n, "Nowhere"),
     ).to.be.revertedWith("LandRegistry: property does not exist");
   });
+
+  it("admin cannot update location to empty string", async function () {
+    const [deployer, , owner] = await ethers.getSigners();
+    const registry = await ethers.deployContract("LandRegistry");
+
+    await registry.registerProperty(propertyId, location, price, owner.address);
+
+    await expect(
+      registry.connect(deployer).updatePropertyLocation(propertyId, ""),
+    ).to.be.revertedWith("LandRegistry: empty location");
+  });
+
+  it("admin cannot update location to the same value", async function () {
+    const [deployer, , owner] = await ethers.getSigners();
+    const registry = await ethers.deployContract("LandRegistry");
+
+    await registry.registerProperty(propertyId, location, price, owner.address);
+
+    await expect(
+      registry.connect(deployer).updatePropertyLocation(propertyId, location),
+    ).to.be.revertedWith("LandRegistry: same location");
+  });
 });
