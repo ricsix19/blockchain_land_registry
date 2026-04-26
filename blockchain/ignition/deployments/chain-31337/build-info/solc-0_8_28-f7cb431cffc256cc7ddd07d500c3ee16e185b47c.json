@@ -1,0 +1,39 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_28-f7cb431cffc256cc7ddd07d500c3ee16e185b47c",
+  "solcVersion": "0.8.28",
+  "solcLongVersion": "0.8.28+commit.7893614a",
+  "userSourceNameMap": {
+    "contracts/LandRegistry.sol": "project/contracts/LandRegistry.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "cancun",
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode",
+            "evm.deployedBytecode",
+            "evm.methodIdentifiers",
+            "metadata"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/LandRegistry.sol": {
+        "content": "// SPDX-License-Identifier: MIT\r\npragma solidity ^0.8.28;\r\n\r\ncontract LandRegistry {\r\n    address public admin;\r\n\r\n    struct Property {\r\n        uint256 propertyId;\r\n        string location;\r\n        uint256 price;\r\n        address currentOwner;\r\n        bool exists;\r\n    }\r\n\r\n    struct PurchaseRequest {\r\n        address buyer;\r\n    }\r\n\r\n    mapping(uint256 => Property) private properties;\r\n    mapping(uint256 => PurchaseRequest) private purchaseRequests;\r\n\r\n    event PropertyRegistered(\r\n        uint256 indexed propertyId,\r\n        string location,\r\n        uint256 price,\r\n        address indexed currentOwner\r\n    );\r\n\r\n    event PropertyTransferred(\r\n        uint256 indexed propertyId,\r\n        address indexed from,\r\n        address indexed to\r\n    );\r\n\r\n    event PurchaseRequested(uint256 indexed propertyId, address indexed buyer);\r\n\r\n    event PurchaseApproved(\r\n        uint256 indexed propertyId,\r\n        address indexed buyer,\r\n        address from,\r\n        address to\r\n    );\r\n\r\n    event PropertyLocationUpdated(\r\n        uint256 indexed propertyId,\r\n        string oldLocation,\r\n        string newLocation\r\n    );\r\n\r\n    constructor() {\r\n        admin = msg.sender;\r\n    }\r\n\r\n    modifier onlyAdmin() {\r\n        require(msg.sender == admin, \"LandRegistry: not admin\");\r\n        _;\r\n    }\r\n\r\n    // Új ingatlan regisztrálása\r\n    function registerProperty(\r\n        uint256 propertyId,\r\n        string memory location,\r\n        uint256 price,\r\n        address initialOwner\r\n    ) external onlyAdmin {\r\n        require(!properties[propertyId].exists, \"LandRegistry: duplicate propertyId\");\r\n        require(initialOwner != address(0), \"LandRegistry: invalid initial owner\");\r\n\r\n        properties[propertyId] = Property({\r\n            propertyId: propertyId,\r\n            location: location,\r\n            price: price,\r\n            currentOwner: initialOwner,\r\n            exists: true\r\n        });\r\n\r\n        emit PropertyRegistered(propertyId, location, price, initialOwner);\r\n    }\r\n\r\n    function updatePropertyLocation(uint256 propertyId, string memory newLocation) external onlyAdmin {\r\n        Property storage p = properties[propertyId];\r\n        require(p.exists, \"LandRegistry: property does not exist\");\r\n        require(bytes(newLocation).length > 0, \"LandRegistry: empty location\");\r\n        require(\r\n            keccak256(bytes(newLocation)) != keccak256(bytes(p.location)),\r\n            \"LandRegistry: same location\"\r\n        );\r\n        string memory oldLocation = p.location;\r\n        p.location = newLocation;\r\n        emit PropertyLocationUpdated(propertyId, oldLocation, newLocation);\r\n    }\r\n\r\n    // Vásárlási kérelem küldése\r\n    function requestPurchase(uint256 propertyId, address buyer) external {\r\n        Property storage p = properties[propertyId];\r\n        require(p.exists, \"LandRegistry: property does not exist\");\r\n        require(buyer != address(0), \"LandRegistry: invalid buyer\");\r\n        require(buyer != p.currentOwner, \"LandRegistry: already owner\");\r\n        require(\r\n            purchaseRequests[propertyId].buyer == address(0),\r\n            \"LandRegistry: pending exists\"\r\n        );\r\n\r\n        purchaseRequests[propertyId].buyer = buyer;\r\n        emit PurchaseRequested(propertyId, buyer);\r\n    }\r\n\r\n    // Vásárlási kérelem jóváhagyása\r\n    function approvePurchaseRequest(uint256 propertyId) external onlyAdmin {\r\n        Property storage p = properties[propertyId];\r\n        require(p.exists, \"LandRegistry: property does not exist\");\r\n        address buyer = purchaseRequests[propertyId].buyer;\r\n        require(buyer != address(0), \"LandRegistry: no pending\");\r\n\r\n        delete purchaseRequests[propertyId];\r\n\r\n        address from = p.currentOwner;\r\n        p.currentOwner = buyer;\r\n\r\n        emit PurchaseApproved(propertyId, buyer, from, buyer);\r\n        emit PropertyTransferred(propertyId, from, buyer);\r\n    }\r\n\r\n    function getProperty(uint256 propertyId)\r\n        external\r\n        view\r\n        returns (\r\n            uint256 id,\r\n            string memory location,\r\n            uint256 price,\r\n            address currentOwner,\r\n            bool exists,\r\n            bool pendingTransfer\r\n        )\r\n    {\r\n        Property storage p = properties[propertyId];\r\n        pendingTransfer = purchaseRequests[propertyId].buyer != address(0);\r\n        return (p.propertyId, p.location, p.price, p.currentOwner, p.exists, pendingTransfer);\r\n    }\r\n}\r\n"
+      }
+    }
+  }
+}
