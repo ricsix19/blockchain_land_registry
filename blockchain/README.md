@@ -36,7 +36,13 @@ npx hardhat test mocha
 
 ## Deploy (Ignition)
 
-Local chain:
+**Persistent local node** (matches `CHAIN_RPC_URL=http://127.0.0.1:8545` in the backend):
+
+1. Terminal A: `npx hardhat node`
+2. Terminal B: `npx hardhat ignition deploy --network localhost ignition/modules/LandRegistry.ts`
+3. Put the printed contract address into `backend/.env` as `LAND_REGISTRY_ADDRESS`.
+
+In-memory chain only (does **not** populate the node on port 8545):
 
 ```shell
 npx hardhat ignition deploy ignition/modules/LandRegistry.ts
